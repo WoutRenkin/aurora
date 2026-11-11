@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tromsø Aurora Watch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+/* Layout idea: one night-sky column. Verdict first, three factors, the map, then detail. Single dark theme on purpose: it is read outdoors at night. */
+:root{
+  color-scheme:dark;
+  --sky:#070b16;
+  --panel:#0e1526;
+  --panel-2:#141d33;
+  --line:#22304f;
+  --ink:#e6eeff;
+  --muted:#8c9bbd;
+  --aurora:#5df2b0;
+  --violet:#b58cff;
+  --good:#5df2b0;
+  --warn:#ffcc66;
+  --bad:#ff7a85;
+  --display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--sky);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
+  background-image:radial-gradient(120% 60% at 20% -10%,rgba(93,242,176,.13),transparent 60%),radial-gradient(90% 50% at 100% 0%,rgba(181,140,255,.12),transparent 60%);
+  background-repeat:no-repeat;
+}
+main{max-width:980px;margin:0 auto;padding:18px 16px 48px;display:flex;flex-direction:column;gap:14px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:20px;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:500;font-size:15px;margin:0 0 10px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
+.clock{font-family:var(--mono);font-size:12px;color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--aurora);outline-offset:2px}
+a{color:var(--aurora)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.verdict{border:1px solid var(--line);border-radius:18px;padding:20px;background:linear-gradient(160deg,var(--panel-2),var(--panel));position:relative;overflow:hidden}
+.verdict::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--tone,var(--muted))}
+.verdict .big{font-family:var(--display);font-weight:700;font-size:clamp(30px,8vw,46px);line-height:1.05;margin:0 0 8px;text-wrap:balance;color:var(--tone,var(--ink))}
+.verdict p{margin:0;color:var(--ink);max-width:60ch}
+.reasons{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:14px}
+.reasons li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--dot,var(--muted))}
+
+.factors{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:14px}
+.factor .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.factor .value{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.1;margin:4px 0 2px}
+.factor .sub{font-size:12.5px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid currentColor;margin-top:8px}
+.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--muted)}
+@media (max-width:560px){.factors{grid-template-columns:1fr}.factor{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px}.factor .label,.factor .sub{grid-column:1}.factor .value{grid-column:1}.factor .pill{grid-column:2;grid-row:1 / span 3;margin:0}}
+
+.mapwrap{padding:0;overflow:hidden}
+.maphead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px 10px}
+.maphead h2{margin:0}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel-2);border-radius:99px;padding:5px 11px;font-size:12.5px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:rgba(93,242,176,.14);border-color:var(--aurora);color:var(--aurora)}
+#map{height:min(62vh,520px);min-height:340px;background:#05080f}
+.hours{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;border-top:1px solid var(--line);scrollbar-width:thin}
+.hours .chip{font-family:var(--mono)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:0 14px 12px;font-size:12px;color:var(--muted)}
+.legend .bar{display:inline-block;width:90px;height:8px;border-radius:4px;vertical-align:middle;margin:0 6px}
+.bar.au{background:linear-gradient(90deg,rgba(93,242,176,.15),#5df2b0,#f6e96b,#ff6b6b)}
+.bar.cl{background:linear-gradient(90deg,rgba(210,220,240,.05),rgba(210,220,240,.75))}
+.maplibregl-popup-content{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:10px;font-family:var(--body);font-size:13px}
+.maplibregl-popup-tip{display:none}
+.maplibregl-ctrl-attrib{background:rgba(7,11,22,.7)!important;color:var(--muted)}
+.maplibregl-ctrl-attrib a{color:var(--muted)}
+.spot{font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 6px;border-radius:99px;background:rgba(7,11,22,.85);border:1.5px solid var(--c,#888);color:var(--c,#fff);white-space:nowrap;cursor:pointer}
+.spot.home{border-width:2px;background:var(--ink);color:var(--sky);border-color:var(--ink);font-weight:600}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.spots{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.spots li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.spots li:first-child{border-top:0}
+.spots .name{font-weight:600}
+.spots .meta{font-size:12px;color:var(--muted);grid-column:1}
+.spots .pct{font-family:var(--mono);font-size:18px;grid-row:1 / span 2;grid-column:2;align-self:center}
+.meter{grid-column:1 / -1;height:4px;border-radius:2px;background:var(--panel-2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--c)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.kv div{background:var(--panel-2);border-radius:10px;padding:8px 10px}
+.kv .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kv .v{font-family:var(--mono);font-size:17px}
+@media (max-width:420px){.kv{grid-template-columns:repeat(2,1fr)}}
+svg{display:block;width:100%;height:auto}
+.cap{font-size:12px;color:var(--muted);margin:6px 0 0}
+.sources{font-size:13.5px}
+.sources ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.sources li{display:grid;grid-template-columns:10px 1fr;gap:10px;align-items:baseline}
+.sources .st{width:8px;height:8px;border-radius:50%;background:var(--muted);transform:translateY(-1px)}
+.sources .st.ok{background:var(--good)}.sources .st.err{background:var(--bad)}
+.sources small{color:var(--muted);display:block}
+.note{font-size:12.5px;color:var(--muted);max-width:70ch}
+@media (prefers-reduced-motion:no-preference){.verdict .big{transition:color .4s}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Tromsø Aurora Watch</h1>
+    <span class="clock" id="clock">loading live data…</span>
+  </header>
+
+  <section class="verdict" id="verdict" aria-live="polite">
+    <p class="big" id="vBig">Checking the sky…</p>
+    <p id="vText">Fetching space weather from NOAA and cloud cover from MET Norway.</p>
+    <ul class="reasons" id="vReasons"></ul>
+  </section>
+
+  <section class="factors">
+    <div class="card factor"><div class="label">Aurora over Tromsø</div><div class="value num" id="fAur">–</div><div class="sub" id="fAurSub">NOAA OVATION nowcast</div><span class="pill dim" id="fAurPill">waiting</span></div>
+    <div class="card factor"><div class="label">Cloud cover in town</div><div class="value num" id="fCld">–</div><div class="sub" id="fCldSub">MET Norway</div><span class="pill dim" id="fCldPill">waiting</span></div>
+    <div class="card factor"><div class="label">Darkness</div><div class="value num" id="fDrk">–</div><div class="sub" id="fDrkSub">sun altitude</div><span class="pill dim" id="fDrkPill">waiting</span></div>
+  </section>
+
+  <section class="card mapwrap">
+    <div class="maphead">
+      <h2>Visibility map</h2>
+      <div class="toggles">
+        <button class="chip" id="tAur" aria-pressed="true">Aurora</button>
+        <button class="chip" id="tCld" aria-pressed="true">Clouds</button>
+        <button class="chip" id="tSpt" aria-pressed="true">Spots</button>
+        <button class="chip" id="tWide" aria-pressed="false">Show whole oval</button>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div class="hours" id="hours" aria-label="Cloud forecast hour"></div>
+    <div class="legend">
+      <span>Aurora chance 0<span class="bar au"></span>90%+</span>
+      <span>Cloud 0<span class="bar cl"></span>100%</span>
+      <span>Spot labels show cloud cover %</span>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <h2 id="spotsTitle">Clearest spots near Tromsø</h2>
+      <ul class="spots" id="spots"><li><span class="meta">Loading cloud forecast…</span></li></ul>
+    </section>
+    <section class="card">
+      <h2>Solar wind at L1</h2>
+      <div class="kv">
+        <div><div class="k">Bz</div><div class="v" id="swBz">–</div></div>
+        <div><div class="k">Bt</div><div class="v" id="swBt">–</div></div>
+        <div><div class="k">Speed</div><div class="v" id="swV">–</div></div>
+        <div><div class="k">Density</div><div class="v" id="swN">–</div></div>
+      </div>
+      <svg id="bzChart" viewBox="0 0 400 110" role="img" aria-label="Bz over the last two hours"></svg>
+      <p class="cap">Bz, last 2 hours (nT). Below zero (green) means the field points south, which lets energy in. Changes reach Earth 30 to 60 minutes later.</p>
+      <h2 style="margin-top:16px">Planetary Kp, next 24 h</h2>
+      <svg id="kpChart" viewBox="0 0 400 120" role="img" aria-label="Kp forecast"></svg>
+      <p class="cap" id="kpCap">Tromsø sits under the auroral oval, so Kp 1 to 2 is often enough here.</p>
+    </section>
+  </div>
+
+  <section class="card sources">
+    <h2>Sources, fetched live by this page</h2>
+    <ul>
+      <li><span class="st" id="sOv"></span><div><a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener">NOAA SWPC OVATION Prime aurora nowcast</a><small id="sOvT">services.swpc.noaa.gov/json/ovation_aurora_latest.json</small></div></li>
+      <li><span class="st" id="sSw"></span><div><a href="https://www.swpc.noaa.gov/products/real-time-solar-wind" target="_blank" rel="noopener">NOAA SWPC real-time solar wind (DSCOVR / ACE)</a><small id="sSwT">services.swpc.noaa.gov/products/solar-wind/</small></div></li>
+      <li><span class="st" id="sKp"></span><div><a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" rel="noopener">NOAA SWPC planetary Kp, observed and forecast</a><small id="sKpT">services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json</small></div></li>
+      <li><span class="st" id="sMet"></span><div><a href="https://api.met.no/weatherapi/locationforecast/2.0/documentation" target="_blank" rel="noopener">MET Norway Locationforecast 2.0</a> (town cloud cover, temperature, wind)<small id="sMetT">api.met.no, data under NLOD / CC BY 4.0</small></div></li>
+      <li><span class="st" id="sOm"></span><div><a href="https://open-meteo.com/en/docs/metno-api" target="_blank" rel="noopener">Open-Meteo, MET Nordic model</a> (cloud grid and spots on the map)<small id="sOmT">api.open-meteo.com, CC BY 4.0</small></div></li>
+      <li><span class="st ok"></span><div>Sun altitude and moon phase are computed in the page from standard astronomical formulas.<small>Basemap © OpenStreetMap contributors © CARTO. Map engine MapLibre GL JS.</small></div></li>
+    </ul>
+    <p class="note" style="margin-top:14px">Check with your eyes too: <a href="https://flux.phys.uit.no/geomag.html" target="_blank" rel="noopener">Tromsø Geophysical Observatory magnetometers (UiT)</a> show local activity before any model does, and <a href="https://www.yr.no/en/forecast/daily-table/1-305409/Norway/Troms/Troms%C3%B8/Troms%C3%B8" target="_blank" rel="noopener">yr.no</a> has the full local forecast.</p>
+    <p class="note">How the verdict works: it needs darkness (sun more than 8° below the horizon), a gap in the clouds, and aurora activity from the OVATION model, with southward Bz as a boost. OVATION gives the chance of aurora overhead; aurora lower on the horizon is often visible when that number is small. Spot coordinates are approximate.</p>
+  </section>
+</main>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+"use strict";
+const HOME={name:"Tromsø",lat:69.6492,lon:18.9553};
+const SPOTS=[
+  {name:"Tromsø centre",lat:69.6492,lon:18.9553,home:true},
+  {name:"Telegrafbukta",lat:69.6335,lon:18.908},
+  {name:"Prestvannet",lat:69.657,lon:18.937},
+  {name:"Ersfjordbotn",lat:69.696,lon:18.633},
+  {name:"Kattfjordeidet",lat:69.65,lon:18.45},
+  {name:"Grøtfjord",lat:69.779,lon:18.542},
+  {name:"Skulsfjord",lat:69.783,lon:18.70},
+  {name:"Sommarøy",lat:69.634,lon:18.017},
+  {name:"Breivikeidet",lat:69.64,lon:19.63},
+  {name:"Oldervik",lat:69.76,lon:19.63},
+  {name:"Lyngseidet",lat:69.576,lon:20.219},
+  {name:"Nordkjosbotn",lat:69.217,lon:19.556},
+  {name:"Skibotn",lat:69.39,lon:20.267},
+  {name:"Kilpisjärvi",lat:69.045,lon:20.80}
+];
+const GRID=[];for(let la=68.75;la<=70.51;la+=0.25)for(let lo=16.5;lo<=22.01;lo+=0.5)GRID.push({lat:+la.toFixed(2),lon:+lo.toFixed(2)});
+
+const S={ov:null,ovTime:null,pHere:null,pNear:null,kpNow:null,kpF:[],mag:[],bz:null,bt:null,v:null,n:null,
+  met:null,om:null,hours:[],hi:0};
+const $=id=>document.getElementById(id);
+const rad=Math.PI/180;
+const osloT=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});
+const fmtT=d=>osloT.format(d);
+function parseT(s){if(typeof s!=="string")return new Date(NaN);let t=s.trim().replace(" ","T");if(!/[zZ]|[+-]\d\d:?\d\d$/.test(t))t+="Z";return new Date(t)}
+function rows(j){ // SWPC serves either array-of-arrays with a header row, or array of objects
+  if(!Array.isArray(j)||!j.length)return[];
+  if(Array.isArray(j[0])){const h=j[0];return j.slice(1).map(r=>{const o={};h.forEach((k,i)=>o[k]=r[i]);return o})}
+  return j;
+}
+const num=x=>{const n=parseFloat(x);return Number.isFinite(n)?n:null};
+async function getJSON(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(r.status+" "+r.statusText);return r.json()}
+function src(id,ok,text){$(id).className="st "+(ok?"ok":"err");if(text)$(id+"T").textContent=text}
+function hav(a,b){const dLa=(b.lat-a.lat)*rad,dLo=(b.lon-a.lon)*rad;const h=Math.sin(dLa/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLo/2)**2;return 12742*Math.asin(Math.sqrt(h))}
+
+/* ---------- astronomy ---------- */
+function sunAlt(date,lat,lon){
+  const d=date.getTime()/86400000+2440587.5-2451545.0;
+  const g=(357.529+0.98560028*d)*rad,q=280.459+0.98564736*d;
+  const L=(q+1.915*Math.sin(g)+0.020*Math.sin(2*g))*rad,e=(23.439-0.00000036*d)*rad;
+  const ra=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L)),dec=Math.asin(Math.sin(e)*Math.sin(L));
+  const gmst=(18.697374558+24.06570982441908*d)%24;
+  const ha=(gmst*15+lon)*rad-ra;
+  return Math.asin(Math.sin(lat*rad)*Math.sin(dec)+Math.cos(lat*rad)*Math.cos(dec)*Math.cos(ha))/rad;
+}
+function moonIllum(date){const jd=date.getTime()/86400000+2440587.5;let p=((jd-2451550.1)/29.530588853)%1;if(p<0)p+=1;return{illum:(1-Math.cos(2*Math.PI*p))/2,waxing:p<0.5}}
+const DARK=-8;
+function darkWindow(now){ // scan 30 h ahead in 5 min steps
+  const step=300000,isDark=t=>sunAlt(new Date(t),HOME.lat,HOME.lon)<DARK;
+  let t=now.getTime(),darkNow=isDark(t),start=darkNow?t:null,end=null;
+  for(let i=1;i<=360;i++){const tt=t+i*step,dk=isDark(tt);
+    if(start===null&&dk)start=tt; else if(start!==null&&!dk){end=tt;break}}
+  return{darkNow,start:start?new Date(start):null,end:end?new Date(end):null};
+}
+
+/* ---------- map ---------- */
+let map,mapReady=false,markers=[];
+function initMap(){
+  if(!window.maplibregl){$("map").textContent="Map library failed to load. Check your connection.";return}
+  const carto=k=>["a","b","c","d"].map(s=>`https://${s}.basemaps.cartocdn.com/${k}/{z}/{x}/{y}@2x.png`);
+  map=new maplibregl.Map({container:"map",center:[HOME.lon+0.4,69.6],zoom:6.3,minZoom:1.5,maxZoom:11,cooperativeGestures:true,attributionControl:{compact:true},
+    style:{version:8,sources:{
+      base:{type:"raster",tiles:carto("dark_nolabels"),tileSize:256,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a> · Aurora: NOAA SWPC · Clouds: MET Norway via Open-Meteo'},
+      labels:{type:"raster",tiles:carto("dark_only_labels"),tileSize:256},
+      clouds:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
+      aurora:{type:"geojson",data:{type:"FeatureCollection",features:[]}}},
+    layers:[
+      {id:"bg",type:"background",paint:{"background-color":"#05080f"}},
+      {id:"base",type:"raster",source:"base"},
+      {id:"clouds",type:"fill",source:"clouds",paint:{"fill-antialias":false,"fill-color":"#d2dcf0","fill-opacity":["interpolate",["linear"],["get","c"],0,0,100,0.6]}},
+      {id:"aurora",type:"fill",source:"aurora",paint:{"fill-antialias":false,
+        "fill-color":["interpolate",["linear"],["get","a"],1,"#2bd98f",15,"#5df2b0",35,"#c8f56a",55,"#f6e96b",80,"#ff8a5c",95,"#ff5c7a"],
+        "fill-opacity":["interpolate",["linear"],["get","a"],1,0.06,10,0.3,40,0.5,90,0.65]}},
+      {id:"labels",type:"raster",source:"labels",paint:{"raster-opacity":0.85}}
+    ]}});
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
+  map.on("load",()=>{mapReady=true;drawAurora();drawClouds()});
+  const tog=(btn,fn)=>$(btn).addEventListener("click",e=>{const b=e.currentTarget,on=b.getAttribute("aria-pressed")!=="true";b.setAttribute("aria-pressed",on);fn(on)});
+  tog("tAur",on=>mapReady&&map.setLayoutProperty("aurora","visibility",on?"visible":"none"));
+  tog("tCld",on=>mapReady&&map.setLayoutProperty("clouds","visibility",on?"visible":"none"));
+  tog("tSpt",on=>markers.forEach(m=>m.getElement().style.display=on?"":"none"));
+  tog("tWide",on=>map.flyTo(on?{center:[10,68],zoom:2.4}:{center:[HOME.lon+0.4,69.6],zoom:6.3}));
+}
+function drawAurora(){
+  if(!mapReady||!S.ov)return;
+  const f=[];
+  for(const [lo0,la,a] of S.ov){
+    if(a<1||la<45||la>88)continue;
+    const lo=lo0>180?lo0-360:lo0;
+    f.push({type:"Feature",properties:{a},geometry:{type:"Polygon",coordinates:[[[lo-.5,la-.5],[lo+.5,la-.5],[lo+.5,la+.5],[lo-.5,la+.5],[lo-.5,la-.5]]]}});
+  }
+  map.getSource("aurora").setData({type:"FeatureCollection",features:f});
+}
+const cloudColor=c=>c<=25?"#5df2b0":c<=50?"#c8f56a":c<=75?"#ffcc66":"#ff7a85";
+function cloudAt(loc,i){if(!loc||!loc.total)return null;const v=loc.total[Math.min(i,loc.total.length-1)];return v==null?null:v}
+function drawClouds(){
+  if(!S.om)return;
+  const i=S.hi;
+  if(mapReady){
+    const f=S.om.grid.map(g=>{const c=cloudAt(g,i);return c==null?null:{type:"Feature",properties:{c},geometry:{type:"Polygon",coordinates:[[[g.lon-.25,g.lat-.125],[g.lon+.25,g.lat-.125],[g.lon+.25,g.lat+.125],[g.lon-.25,g.lat+.125],[g.lon-.25,g.lat-.125]]]}}}).filter(Boolean);
+    map.getSource("clouds").setData({type:"FeatureCollection",features:f});
+    markers.forEach(m=>m.remove());markers=[];
+    const show=$("tSpt").getAttribute("aria-pressed")==="true";
+    S.om.spots.forEach(s=>{
+      const c=cloudAt(s,i);if(c==null)return;
+      const el=document.createElement("div");el.className="spot"+(s.home?" home":"");el.style.setProperty("--c",cloudColor(c));
+      el.textContent=(s.home?"Tromsø ":"")+Math.round(c)+"%";if(!show)el.style.display="none";
+      const pop=new maplibregl.Popup({offset:14,closeButton:false}).setText(`${s.name}: ${Math.round(c)}% cloud (low ${fmtPct(s.low,i)}, mid ${fmtPct(s.mid,i)}, high ${fmtPct(s.high,i)})`);
+      markers.push(new maplibregl.Marker({element:el}).setLngLat([s.lon,s.lat]).setPopup(pop).addTo(map));
+    });
+  }
+  renderSpots();
+}
+const fmtPct=(arr,i)=>arr&&arr[i]!=null?Math.round(arr[i])+"%":"–";
+
+/* ---------- fetchers ---------- */
+async function loadOvation(){
+  try{
+    const j=await getJSON("https://services.swpc.noaa.gov/json/ovation_aurora_latest.json");
+    S.ov=j.coordinates||[];S.ovTime=parseT(j["Forecast Time"]||j["Observation Time"]||"");
+    const m=new Map();for(const [lo,la,a] of S.ov)m.set(lo+"_"+la,a);
+    const lo0=Math.round(HOME.lon),la0=Math.round(HOME.lat);
+    S.pHere=m.get(lo0+"_"+la0)??null;
+    let mx=0;for(let dla=-4;dla<=4;dla++)for(let dlo=-6;dlo<=6;dlo++){const v=m.get(((lo0+dlo+360)%360)+"_"+(la0+dla));if(v>mx)mx=v}
+    S.pNear=mx;
+    src("sOv",true,"Model valid for "+(isNaN(S.ovTime)?"now":fmtT(S.ovTime))+" · fetched "+fmtT(new Date()));
+    drawAurora();
+  }catch(e){src("sOv",false,"Could not load OVATION: "+e.message)}
+  render();
+}
+async function loadSolarWind(){
+  try{
+    const [mj,pj]=await Promise.all([getJSON("https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json"),getJSON("https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json")]);
+    const mag=rows(mj).map(r=>({t:parseT(r.time_tag),bz:num(r.bz_gsm),bt:num(r.bt)})).filter(r=>r.bz!=null&&!isNaN(r.t));
+    const pl=rows(pj).map(r=>({t:parseT(r.time_tag),v:num(r.speed),n:num(r.density)}));
+    S.mag=mag;const lm=mag[mag.length-1];S.bz=lm?lm.bz:null;S.bt=lm?lm.bt:null;
+    const lv=[...pl].reverse().find(r=>r.v!=null),ln=[...pl].reverse().find(r=>r.n!=null);
+    S.v=lv?lv.v:null;S.n=ln?ln.n:null;
+    src("sSw",true,"Latest sample "+(lm?fmtT(lm.t):"–")+" · fetched "+fmtT(new Date()));
+  }catch(e){src("sSw",false,"Could not load solar wind: "+e.message)}
+  render();
+}
+async function loadKp(){
+  try{
+    const j=rows(await getJSON("https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json"));
+    const all=j.map(r=>({t:parseT(r.time_tag),kp:num(r.kp??r.Kp),kind:String(r.observed??"")})).filter(r=>r.kp!=null&&!isNaN(r.t));
+    const now=Date.now();
+    const cur=[...all].reverse().find(r=>r.t.getTime()<=now);S.kpNow=cur?cur.kp:null;
+    S.kpF=all.filter(r=>r.t.getTime()>now-3*3600e3).slice(0,8);
+    src("sKp",true,"Current 3 h window Kp "+(S.kpNow!=null?S.kpNow.toFixed(1):"–")+" · fetched "+fmtT(new Date()));
+  }catch(e){src("sKp",false,"Could not load Kp: "+e.message)}
+  render();
+}
+async function loadMet(){
+  try{
+    const j=await getJSON(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${HOME.lat}&lon=${HOME.lon}`);
+    const ts=j.properties.timeseries,now=Date.now();
+    let best=ts[0];for(const x of ts){if(Math.abs(new Date(x.time)-now)<Math.abs(new Date(best.time)-now))best=x}
+    const d=best.data.instant.details;
+    S.met={t:new Date(best.time),cloud:d.cloud_area_fraction,low:d.cloud_area_fraction_low,mid:d.cloud_area_fraction_medium,high:d.cloud_area_fraction_high,temp:d.air_temperature,wind:d.wind_speed,fog:d.fog_area_fraction};
+    src("sMet",true,"Forecast step "+fmtT(S.met.t)+" · fetched "+fmtT(new Date()));
+  }catch(e){src("sMet",false,"Could not load MET Norway directly ("+e.message+"). Town cloud cover falls back to the Open-Meteo MET Nordic value.")}
+  render();
+}
+async function loadClouds(){
+  try{
+    const pts=[...SPOTS,...GRID];
+    const u="https://api.open-meteo.com/v1/forecast?latitude="+pts.map(p=>p.lat).join(",")+"&longitude="+pts.map(p=>p.lon).join(",")+
+      "&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&models=metno_seamless&forecast_hours=13&timeformat=unixtime&timezone=UTC";
+    let j=await getJSON(u);if(!Array.isArray(j))j=[j];
+    const pick=(h,k)=>h[k]||h[Object.keys(h).find(x=>x.startsWith(k)&&!/_(low|mid|high)/.test(x.slice(k.length)))]||null;
+    const conv=(p,r)=>{const h=r.hourly||{};return{...p,total:pick(h,"cloud_cover"),low:h.cloud_cover_low||pick(h,"cloud_cover_low"),mid:h.cloud_cover_mid||pick(h,"cloud_cover_mid"),high:h.cloud_cover_high||pick(h,"cloud_cover_high")}};
+    S.om={spots:SPOTS.map((p,i)=>conv(p,j[i])),grid:GRID.map((p,i)=>conv(p,j[SPOTS.length+i]))};
+    S.hours=(j[0].hourly.time||[]).map(t=>new Date(t*1000));
+    if(S.hi>=S.hours.length)S.hi=0;
+    src("sOm",true,pts.length+" points, hourly · fetched "+fmtT(new Date()));
+    renderHours();drawClouds();
+  }catch(e){src("sOm",false,"Could not load cloud grid: "+e.message)}
+  render();
+}
+
+/* ---------- rendering ---------- */
+function renderHours(){
+  const box=$("hours");box.textContent="";
+  S.hours.forEach((t,i)=>{const b=document.createElement("button");b.className="chip";b.id="hr"+i;b.textContent=i===0?"Now":fmtT(t);b.setAttribute("aria-pressed",i===S.hi);
+    b.addEventListener("click",()=>{S.hi=i;[...box.children].forEach((c,k)=>c.setAttribute("aria-pressed",k===i));drawClouds()});box.appendChild(b)});
+}
+function renderSpots(){
+  if(!S.om)return;const i=S.hi,ul=$("spots");ul.textContent="";
+  $("spotsTitle").textContent="Clearest spots near Tromsø, "+(i===0?"now":"at "+fmtT(S.hours[i]));
+  const list=S.om.spots.map(s=>({...s,c:cloudAt(s,i),km:hav(HOME,s)})).filter(s=>s.c!=null).sort((a,b)=>a.c-b.c||a.km-b.km);
+  list.forEach(s=>{
+    const li=document.createElement("li");const col=cloudColor(s.c);
+    const n=document.createElement("span");n.className="name";n.textContent=s.name;
+    const p=document.createElement("span");p.className="pct";p.style.color=col;p.textContent=Math.round(s.c)+"%";
+    const m=document.createElement("span");m.className="meta";m.textContent=(s.home?"in town":Math.round(s.km)+" km away")+" · low "+fmtPct(s.low,i)+" · mid "+fmtPct(s.mid,i)+" · high "+fmtPct(s.high,i);
+    const mt=document.createElement("div");mt.className="meter";mt.style.setProperty("--c",col);const bar=document.createElement("i");bar.style.width=Math.max(2,s.c)+"%";mt.appendChild(bar);
+    li.append(n,p,m,mt);ul.appendChild(li);
+  });
+}
+function pill(id,cls,text){const e=$(id);e.className="pill "+cls;e.textContent=text}
+function townCloud(){if(S.met&&S.met.cloud!=null)return{c:S.met.cloud,src:"MET Norway"};if(S.om){const c=cloudAt(S.om.spots[0],0);if(c!=null)return{c,src:"MET Nordic via Open-Meteo"}}return null}
+function render(){
+  const now=new Date();
+  $("clock").textContent="Tromsø "+fmtT(now)+" · refreshes automatically";
+  // darkness
+  const alt=sunAlt(now,HOME.lat,HOME.lon),dw=darkWindow(now),moon=moonIllum(now);
+  const dark=alt<-9?2:alt<DARK?1:0;
+  $("fDrk").textContent=(alt>0?"+":"")+alt.toFixed(1)+"°";
+  $("fDrkSub").textContent=(dw.darkNow?(dw.end?"Dark until "+fmtT(dw.end):"Dark all day"):(dw.start?"Dark from "+fmtT(dw.start):"No darkness in the next 30 h"))+" · moon "+Math.round(moon.illum*100)+"% lit";
+  pill("fDrkPill",dark===2?"good":dark===1?"warn":"bad",dark===2?"dark enough":dark===1?"deep twilight":"too bright");
+  // aurora
+  let act=null,actTxt="";
+  if(S.pHere!=null){
+    const eff=Math.max(S.pHere,0.6*(S.pNear||0));
+    act=eff>=25?3:eff>=10?2:eff>=4?1:0;
+    if(S.bz!=null&&S.bz<=-5&&act>=1&&act<3)act++;
+    $("fAur").textContent=Math.round(S.pHere)+"%";
+    $("fAurSub").textContent="overhead · up to "+Math.round(S.pNear||0)+"% nearby · Kp "+(S.kpNow!=null?S.kpNow.toFixed(1):"–");
+  }else if(S.kpNow!=null){
+    act=S.kpNow>=4?3:S.kpNow>=2.5?2:S.kpNow>=1.5?1:0;
+    $("fAur").textContent="Kp "+S.kpNow.toFixed(1);$("fAurSub").textContent="OVATION unavailable, using Kp";
+  }
+  if(act!=null){actTxt=["quiet","weak","active","strong"][act];pill("fAurPill",act>=2?"good":act===1?"warn":"bad",actTxt)}
+  // clouds
+  const tc=townCloud();let cl=null;
+  if(tc){cl=tc.c<=25?3:tc.c<=50?2:tc.c<=75?1:0;
+    $("fCld").textContent=Math.round(tc.c)+"%";
+    $("fCldSub").textContent=tc.src+(S.met&&S.met.temp!=null?" · "+Math.round(S.met.temp)+" °C, wind "+Math.round(S.met.wind)+" m/s":"");
+    pill("fCldPill",cl>=2?"good":cl===1?"warn":"bad",["overcast","mostly cloudy","partly clear","clear"][cl]);}
+  // best clear spot
+  let best=null;if(S.om){best=S.om.spots.map(s=>({...s,c:cloudAt(s,0),km:hav(HOME,s)})).filter(s=>s.c!=null&&!s.home).sort((a,b)=>a.c-b.c||a.km-b.km)[0]}
+  // solar wind
+  const set=(id,v,u,d=0)=>$(id).textContent=v==null?"–":v.toFixed(d)+u;
+  set("swBz",S.bz," nT",1);set("swBt",S.bt," nT",1);set("swV",S.v," km/s");set("swN",S.n," /cm³",1);
+  $("swBz").className="v "+(S.bz==null?"":S.bz<=-3?"good":S.bz>=3?"bad":"");
+  drawBz();drawKp();
+  // verdict
+  const V=$("verdict"),R=[];let big,text,tone="var(--muted)";
+  const add=(t,c)=>R.push([t,c]);
+  if(act==null||cl==null){big="Checking the sky…";text="Waiting for "+(act==null?"NOAA space weather":"cloud data")+". If this stays, see the source list below for what failed.";}
+  else{
+    if(dark===0){big="Too bright right now";tone="var(--warn)";text=dw.start?"It gets dark enough around "+fmtT(dw.start)+". Check back then.":"The sun stays too high for aurora today.";}
+    else if(cl===0&&best&&best.c<=45&&act>=1){big="Clouded in. Drive out.";tone="var(--warn)";text=`Town is overcast, but ${best.name} (${Math.round(best.km)} km) shows ${Math.round(best.c)}% cloud and the aurora is ${actTxt}.`;}
+    else if(cl===0){big="Clouds are in the way";tone="var(--bad)";text="The sky over Tromsø is overcast"+(best?` and the clearest nearby spot, ${best.name}, is at ${Math.round(best.c)}% cloud.`:".")+" Use the hour buttons on the map to find a gap later tonight.";}
+    else if(act===0){big="Quiet sky for now";tone="var(--muted)";text="It is dark and you can see sky, but the model shows very little aurora over Tromsø. Activity can pick up within minutes, so glance north now and then.";}
+    else if(act>=2&&cl>=2){big="Go outside now";tone="var(--good)";text="Dark, mostly clear and the aurora is "+actTxt+" over Tromsø. Get away from street lights and look up.";}
+    else{big="Worth a look";tone="var(--aurora)";text=(cl>=2?"Clear enough sky and ":"Gaps in the cloud and ")+actTxt+" aurora. Find a dark spot and give your eyes ten minutes."+(cl===1&&best&&best.c<=30?` ${best.name} is clearer (${Math.round(best.c)}%).`:"");}
+    add("Aurora "+actTxt+(S.pHere!=null?`: ${Math.round(S.pHere)}% overhead in the OVATION model`:""),act>=2?"var(--good)":act===1?"var(--warn)":"var(--bad)");
+    if(S.bz!=null)add(`Bz ${S.bz.toFixed(1)} nT (${S.bz<0?"southward, helps":"northward, holds activity back"})`+(S.v!=null?`, solar wind ${Math.round(S.v)} km/s`:""),S.bz<=-3?"var(--good)":S.bz<3?"var(--warn)":"var(--bad)");
+    add(`Cloud cover in town ${Math.round(tc.c)}%`,cl>=2?"var(--good)":cl===1?"var(--warn)":"var(--bad)");
+    add(`Sun ${alt.toFixed(1)}° ${alt<0?"below":"above"} the horizon, moon ${Math.round(moon.illum*100)}% lit`,dark===2?"var(--good)":dark===1?"var(--warn)":"var(--bad)");
+  }
+  V.style.setProperty("--tone",tone);$("vBig").textContent=big;$("vText").textContent=text;
+  const ul=$("vReasons");ul.textContent="";R.forEach(([t,c])=>{const li=document.createElement("li");li.style.setProperty("--dot",c);li.textContent=t;ul.appendChild(li)});
+}
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+function drawBz(){
+  const svg=$("bzChart");svg.textContent="";const d=S.mag;if(!d.length){svg.appendChild(el("text",{x:8,y:60,fill:"#8c9bbd","font-size":12},"No solar wind data yet"));return}
+  const W=400,H=110,L=30,Rr=8,T=8,B=18;
+  const m=Math.max(5,Math.ceil(Math.max(...d.map(r=>Math.abs(r.bz)))/5)*5);
+  const t0=d[0].t.getTime(),t1=d[d.length-1].t.getTime()||t0+1;
+  const x=t=>L+(W-L-Rr)*(t-t0)/Math.max(1,t1-t0),y=v=>T+(H-T-B)*(m-v)/(2*m);
+  [m,0,-m].forEach(v=>{svg.appendChild(el("line",{x1:L,x2:W-Rr,y1:y(v),y2:y(v),stroke:v===0?"#3a4a70":"#1a2540","stroke-width":1}));
+    svg.appendChild(el("text",{x:L-5,y:y(v)+4,fill:"#8c9bbd","font-size":10,"text-anchor":"end","font-family":"IBM Plex Mono, monospace"},(v>0?"+":"")+v))});
+  const pts=d.map(r=>[x(r.t.getTime()),y(r.bz)]);
+  const line="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join("L");
+  const clipS=el("clipPath",{id:"south"});clipS.appendChild(el("rect",{x:L,y:y(0),width:W-L-Rr,height:y(-m)-y(0)}));svg.appendChild(clipS);
+  svg.appendChild(el("path",{d:line+`L${pts[pts.length-1][0].toFixed(1)},${y(0)}L${pts[0][0].toFixed(1)},${y(0)}Z`,fill:"rgba(93,242,176,.28)","clip-path":"url(#south)"}));
+  svg.appendChild(el("path",{d:line,fill:"none",stroke:"#e6eeff","stroke-width":1.4,"stroke-linejoin":"round"}));
+  const lp=pts[pts.length-1];svg.appendChild(el("circle",{cx:lp[0],cy:lp[1],r:3.5,fill:S.bz<0?"#5df2b0":"#ff7a85"}));
+  svg.appendChild(el("text",{x:L,y:H-4,fill:"#8c9bbd","font-size":10,"font-family":"IBM Plex Mono, monospace"},fmtT(d[0].t)));
+  svg.appendChild(el("text",{x:W-Rr,y:H-4,fill:"#8c9bbd","font-size":10,"text-anchor":"end","font-family":"IBM Plex Mono, monospace"},fmtT(d[d.length-1].t)));
+}
+function drawKp(){
+  const svg=$("kpChart");svg.textContent="";const d=S.kpF;if(!d.length){svg.appendChild(el("text",{x:8,y:60,fill:"#8c9bbd","font-size":12},"No Kp forecast yet"));return}
+  const W=400,H=120,L=22,T=16,B=20,n=d.length,bw=(W-L-6)/n,y=v=>T+(H-T-B)*(1-v/9);
+  [0,3,5,9].forEach(v=>{svg.appendChild(el("line",{x1:L,x2:W,y1:y(v),y2:y(v),stroke:"#1a2540","stroke-width":1}));
+    svg.appendChild(el("text",{x:L-5,y:y(v)+3,fill:"#8c9bbd","font-size":10,"text-anchor":"end","font-family":"IBM Plex Mono, monospace"},v))});
+  const now=Date.now();
+  d.forEach((r,i)=>{const x=L+i*bw+3,h=Math.max(2,y(0)-y(r.kp)),col=r.kp>=5?"#ff7a85":r.kp>=4?"#ffcc66":r.kp>=2?"#5df2b0":"#3f8f76";
+    const cur=r.t.getTime()<=now&&now<r.t.getTime()+3*3600e3;
+    svg.appendChild(el("rect",{x,y:y(0)-h,width:bw-6,height:h,rx:3,fill:col,opacity:cur?1:0.75,stroke:cur?"#e6eeff":"none","stroke-width":1.2}));
+    svg.appendChild(el("text",{x:x+(bw-6)/2,y:y(0)-h-4,fill:"#e6eeff","font-size":10,"text-anchor":"middle","font-family":"IBM Plex Mono, monospace"},r.kp.toFixed(1)));
+    svg.appendChild(el("text",{x:x+(bw-6)/2,y:H-5,fill:"#8c9bbd","font-size":10,"text-anchor":"middle","font-family":"IBM Plex Mono, monospace"},fmtT(r.t)))});
+}
+
+/* ---------- go ---------- */
+if(typeof document!=="undefined"&&document.getElementById("map")){
+  initMap();render();
+  loadOvation();loadSolarWind();loadKp();loadMet();loadClouds();
+  setInterval(loadSolarWind,60e3);setInterval(loadOvation,5*60e3);setInterval(loadKp,30*60e3);
+  setInterval(loadMet,15*60e3);setInterval(loadClouds,15*60e3);setInterval(render,30e3);
+}
+</script>
+</body>
+</html>
