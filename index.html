@@ -9,51 +9,68 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
-/* One dark column: answer for right now, three nights, map, where to go, how to watch, sources. */
+/* One dark column: a living-sky hero with the answer, four nights, hour strip, map, where to go, tips, sources. */
 :root{
   color-scheme:dark;
-  --sky:#070b16;--panel:#0e1526;--panel-2:#151e35;--line:#22304f;
-  --ink:#e8efff;--muted:#93a1c2;--aurora:#5df2b0;
+  --sky:#060a15;--panel:#0d1425;--panel-2:#151e35;--line:#22304f;
+  --ink:#e8efff;--muted:#93a1c2;--aurora:#5df2b0;--violet:#b58cff;
   --good:#5df2b0;--maybe:#ffcc66;--no:#ff8a93;
   --display:"Bricolage Grotesque",system-ui,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--sky);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
-  background-image:radial-gradient(110% 55% at 15% -10%,rgba(93,242,176,.14),transparent 60%),radial-gradient(80% 45% at 100% 0%,rgba(181,140,255,.12),transparent 60%);background-repeat:no-repeat}
-main{max-width:860px;margin:0 auto;padding:18px 16px 48px;display:flex;flex-direction:column;gap:16px}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+body{background:var(--sky);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+main{max-width:960px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 h1{font-family:var(--display);font-weight:700;font-size:20px;margin:0}
 h2{font-family:var(--display);font-weight:700;font-size:18px;margin:0 0 10px}
 .small{font-size:13px;color:var(--muted)}
 a{color:var(--aurora)}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--aurora);outline-offset:2px}
-.card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px}
+.card{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:16px}
 .alert{border-color:rgba(255,138,147,.5);background:rgba(255,138,147,.08);font-size:14px;display:none}
+.locbtn{border:1px solid var(--line);background:var(--panel-2);border-radius:99px;padding:7px 14px;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.locbtn::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--aurora);box-shadow:0 0 0 3px rgba(93,242,176,.25)}
+.locbtn:hover{border-color:var(--aurora)}
 
-.now{position:relative;overflow:hidden;padding:20px 20px 18px 24px;background:linear-gradient(160deg,var(--panel-2),var(--panel))}
-.now::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--tone,var(--muted))}
-.now .eyebrow{font-size:13px;color:var(--muted);margin:0 0 4px}
-.now .big{font-family:var(--display);font-weight:700;font-size:clamp(30px,8vw,44px);line-height:1.05;margin:0 0 8px;color:var(--tone,var(--ink));text-wrap:balance}
-.now p{margin:0;max-width:58ch}
+.hero{position:relative;overflow:hidden;border-radius:22px;border:1px solid var(--line);background:linear-gradient(180deg,#050816,#0a1226 70%,#0d1425);min-height:270px;display:flex;align-items:flex-end}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero .scrim{position:absolute;inset:auto 0 0 0;height:70%;background:linear-gradient(180deg,transparent,rgba(6,10,21,.88) 70%)}
+.hero .txt{position:relative;padding:22px;width:100%}
+.hero .eyebrow{font-size:13px;color:var(--muted);margin:0 0 4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--tone,var(--muted))}
+.hero .big{font-family:var(--display);font-weight:700;font-size:clamp(34px,9vw,54px);line-height:1.02;margin:0 0 8px;color:var(--tone,var(--ink));text-wrap:balance;text-shadow:0 2px 24px rgba(0,0,0,.6)}
+.hero p.say{margin:0;max-width:56ch}
 
-.nights{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-@media (max-width:620px){.nights{grid-template-columns:1fr}}
-.night{text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:6px}
-.night[aria-pressed="true"]{border-color:var(--aurora);box-shadow:0 0 0 1px var(--aurora) inset}
+.nights{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:820px){.nights{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:460px){.nights{grid-template-columns:1fr}}
+.night{position:relative;overflow:hidden;text-align:left;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:7px}
+.night::before{content:"";position:absolute;inset:0 0 auto 0;height:60px;background:radial-gradient(80% 100% at 50% 0%,var(--glow,transparent),transparent);opacity:.28;pointer-events:none}
+.night[aria-pressed="true"]{border-color:var(--aurora);box-shadow:0 0 0 1px var(--aurora) inset,0 8px 30px -12px rgba(93,242,176,.45)}
 .night .day{font-size:13px;color:var(--muted)}
 .night .rate{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1}
 .night .why{font-size:14px}
-.badges{display:flex;gap:6px;flex-wrap:wrap}
+.meter{display:flex;gap:4px}
+.meter i{flex:1;height:5px;border-radius:3px;background:var(--panel-2)}
+.meter i.on{background:var(--glow)}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
 .badge{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
-.c-good{color:var(--good)}.c-maybe{color:var(--maybe)}.c-no{color:var(--no)}
+.badge b{color:var(--ink);font-weight:600}
+.c-good{color:var(--good)!important}.c-maybe{color:var(--maybe)!important}.c-no{color:var(--no)!important}
+
+.hours{display:grid;grid-template-columns:repeat(auto-fit,minmax(34px,1fr));gap:5px}
+.hr{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.hr i{display:block;width:100%;height:34px;border-radius:8px;background:var(--c)}
+.hr.past{opacity:.35}
 
 .mapcard{padding:0;overflow:hidden}
 .mapcard .head{padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .mapcard h2{margin:0}
-#map{height:min(58vh,480px);min-height:320px;background:#0b0f19}
+#map{height:min(60vh,520px);min-height:340px;background:#0b0f19}
 .legend{display:flex;gap:16px;flex-wrap:wrap;padding:10px 16px 14px;font-size:13px;color:var(--muted)}
 .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
 .sw.au{background:linear-gradient(135deg,#2bd98f,#c8f56a)}
@@ -64,12 +81,16 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .maplibregl-ctrl-attrib{background:rgba(7,11,22,.75)!important;color:var(--muted)}
 .maplibregl-ctrl-attrib a{color:var(--muted)}
 .pin{font-size:12px;font-weight:600;padding:3px 8px;border-radius:99px;background:rgba(7,11,22,.88);border:1.5px solid var(--c);color:var(--c);white-space:nowrap;cursor:pointer}
+.me{width:16px;height:16px;border-radius:50%;background:#7db7ff;border:3px solid #fff;box-shadow:0 0 0 0 rgba(125,183,255,.6)}
+@media (prefers-reduced-motion:no-preference){.me{animation:pulse 2s infinite}}
+@keyframes pulse{to{box-shadow:0 0 0 16px rgba(125,183,255,0)}}
 
 .spots{list-style:none;margin:0;padding:0}
-.spots li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.spots li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .spots li:first-child{border-top:0;padding-top:0}
 .spots .name{font-weight:600}
 .spots .sky{font-weight:600;white-space:nowrap}
+.spots .top{font-size:11px;font-weight:600;color:var(--sky);background:var(--good);border-radius:99px;padding:1px 8px;margin-left:8px;vertical-align:2px}
 
 .tips{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:62ch}
 details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:18px}
@@ -84,21 +105,32 @@ details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-s
 <main>
   <header>
     <h1>Tromsø Aurora Watch</h1>
-    <span class="small" id="clock">Loading…</span>
+    <button class="locbtn" id="locBtn">Use my location</button>
   </header>
+  <div class="small" id="locMsg" role="status" style="display:none"></div>
 
   <section class="card alert" id="alert" role="status"></section>
 
-  <section class="card now" id="now" aria-live="polite">
-    <p class="eyebrow">Right now in Tromsø</p>
-    <p class="big" id="nowBig">Checking the sky…</p>
-    <p id="nowText">Getting the latest aurora and cloud forecasts.</p>
+  <section class="hero" id="now" aria-live="polite">
+    <canvas id="skyCv" aria-hidden="true"></canvas>
+    <div class="scrim"></div>
+    <div class="txt">
+      <p class="eyebrow"><span class="live" id="nowWhere">Right now in Tromsø</span><span id="clock"></span></p>
+      <p class="big" id="nowBig">Checking the sky…</p>
+      <p class="say" id="nowText">Getting the latest aurora and cloud forecasts.</p>
+    </div>
   </section>
 
   <section>
-    <h2>Next three nights</h2>
+    <h2>Next four nights</h2>
     <div class="nights" id="nights"></div>
-    <p class="small" style="margin:8px 0 0">Tap a night to see its clouds on the map. Each night covers 18:00 to 02:00, when aurora is most likely.</p>
+    <p class="small" style="margin:8px 0 0">Tap a night to see its clouds on the map. Each night covers 18:00 to 02:00, when aurora is most likely. The further ahead, the less certain.</p>
+  </section>
+
+  <section class="card">
+    <h2 id="hoursTitle">Sky hour by hour</h2>
+    <div class="hours" id="hours"></div>
+    <p class="small" style="margin:10px 0 0">Green is clear sky, yellow is partly cloudy, grey is cloudy.</p>
   </section>
 
   <section class="card mapcard">
@@ -107,7 +139,7 @@ details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-s
     <div class="legend">
       <span><span class="sw au"></span>Aurora band (right now)</span>
       <span><span class="sw cl"></span>Clouds</span>
-      <span><span class="sw sp"></span>Viewing spots</span>
+      <span><span class="sw sp"></span>Viewing spots, green is clear</span>
     </div>
   </section>
 
@@ -132,10 +164,10 @@ details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-s
       <summary>Where this data comes from</summary>
       <ul class="src">
         <li><span class="dot" id="dOv"></span><div><a href="https://www.swpc.noaa.gov/products/aurora-30-minute-forecast" target="_blank" rel="noopener">NOAA Space Weather Prediction Center: aurora nowcast (OVATION)</a><small id="tOv">Waiting…</small></div></li>
-        <li><span class="dot" id="dKp"></span><div><a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" rel="noopener">NOAA Space Weather Prediction Center: 3-day Kp forecast</a><small id="tKp">Waiting…</small></div></li>
-        <li><span class="dot" id="dMet"></span><div><a href="https://api.met.no/weatherapi/locationforecast/2.0/documentation" target="_blank" rel="noopener">MET Norway (yr.no): cloud forecast for Tromsø</a><small id="tMet">Waiting…</small></div></li>
+        <li><span class="dot" id="dKp"></span><div><a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" rel="noopener">NOAA Space Weather Prediction Center: 3-day Kp forecast</a> and <a href="https://www.swpc.noaa.gov/products/27-day-outlook-107-cm-radio-flux-and-geomagnetic-indices" target="_blank" rel="noopener">27-day outlook</a><small id="tKp">Waiting…</small></div></li>
+        <li><span class="dot" id="dMet"></span><div><a href="https://api.met.no/weatherapi/locationforecast/2.0/documentation" target="_blank" rel="noopener">MET Norway (yr.no): cloud forecast for your spot</a><small id="tMet">Waiting…</small></div></li>
         <li><span class="dot" id="dOm"></span><div><a href="https://open-meteo.com/en/docs/metno-api" target="_blank" rel="noopener">Open-Meteo, MET Nordic model: clouds for the map and spots</a><small id="tOm">Waiting…</small></div></li>
-        <li><span class="dot ok"></span><div>Darkness and moon are calculated in the page.<small>Map: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © OpenMapTiles, data © OpenStreetMap contributors. Spot locations are approximate.</small></div></li>
+        <li><span class="dot ok"></span><div>Darkness and moon are calculated in the page. Your location never leaves your phone except as coordinates in the weather requests.<small>Map: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © OpenMapTiles, data © OpenStreetMap contributors. Spot locations are approximate.</small></div></li>
       </ul>
     </details>
   </section>
@@ -144,9 +176,10 @@ details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-s
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 "use strict";
-const HOME={name:"Tromsø",lat:69.6492,lon:18.9553};
+const TROMSO={name:"Tromsø",lat:69.6492,lon:18.9553};
+let HOME={...TROMSO};
 const SPOTS=[
-  {name:"Tromsø centre",lat:69.6492,lon:18.9553,home:true},
+  {name:"Tromsø centre",lat:69.6492,lon:18.9553},
   {name:"Telegrafbukta",lat:69.6335,lon:18.908},
   {name:"Prestvannet",lat:69.657,lon:18.937},
   {name:"Ersfjordbotn",lat:69.696,lon:18.633},
@@ -161,20 +194,23 @@ const SPOTS=[
   {name:"Kilpisjärvi (Finland)",lat:69.045,lon:20.80}
 ];
 const GRID=[];for(let la=68.75;la<=70.51;la+=0.25)for(let lo=16.5;lo<=22.01;lo+=0.5)GRID.push({lat:+la.toFixed(2),lon:+lo.toFixed(2)});
+const spotList=()=>HOME.user?[{name:"Your location",lat:HOME.lat,lon:HOME.lon,home:true},...SPOTS]:SPOTS.map((s,i)=>i===0?{...s,home:true}:s);
+const here=()=>HOME.user?"where you are":"in Tromsø";
 
-const S={ov:null,pHere:null,pNear:null,kp:[],met:null,om:null,sel:0,errors:{}};
+const S={ov:null,pHere:null,pNear:null,kp:[],kpDaily:{},met:null,om:null,sel:0,errors:{},info:[]};
 const $=id=>document.getElementById(id);
 const rad=Math.PI/180;
 const TZ="Europe/Oslo";
 const fHM=new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour:"2-digit",minute:"2-digit"});
 const fDay=new Intl.DateTimeFormat("en-GB",{timeZone:TZ,weekday:"short",day:"numeric",month:"short"});
+const fWk=new Intl.DateTimeFormat("en-GB",{timeZone:TZ,weekday:"long"});
 const fParts=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"});
 function local(d){const p={};for(const x of fParts.formatToParts(d))p[x.type]=x.value;return{date:`${p.year}-${p.month}-${p.day}`,hour:+p.hour}}
 function nightKey(d){const l=local(d);if(l.hour>=18)return l.date;if(l.hour<2)return local(new Date(d.getTime()-3*3600e3)).date;return null}
 function parseT(s){let t=String(s).trim().replace(" ","T");if(!/[zZ]|[+-]\d\d:?\d\d$/.test(t))t+="Z";return new Date(t)}
 async function getJSON(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}
 function hav(a,b){const dLa=(b.lat-a.lat)*rad,dLo=(b.lon-a.lon)*rad;const h=Math.sin(dLa/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLo/2)**2;return 12742*Math.asin(Math.sqrt(h))}
-const NAMES={Ov:"the live aurora map",Kp:"the aurora forecast for the coming nights",Met:"the Tromsø cloud forecast",Om:"the cloud map and spot list"};
+const NAMES={Ov:"the live aurora map",Kp:"the aurora forecast for the coming nights",Met:"the local cloud forecast",Om:"the cloud map and spot list"};
 function status(k,ok,msg){$("d"+k).className="dot "+(ok?"ok":"err");$("t"+k).textContent=msg;if(ok)delete S.errors[k];else S.errors[k]=msg;
   const e=Object.keys(S.errors),a=$("alert");a.style.display=e.length?"block":"none";
   a.textContent=e.length?"Couldn't load "+e.map(x=>NAMES[x]).join(" and ")+". The rest of the page still works, and it will retry automatically.":""}
@@ -186,18 +222,19 @@ function sunAlt(date,lat,lon){const d=date.getTime()/86400000+2440587.5-2451545.
   return Math.asin(Math.sin(lat*rad)*Math.sin(dec)+Math.cos(lat*rad)*Math.cos(dec)*Math.cos(ha))/rad}
 function moonIllum(date){const jd=date.getTime()/86400000+2440587.5;let p=((jd-2451550.1)/29.530588853)%1;if(p<0)p+=1;return(1-Math.cos(2*Math.PI*p))/2}
 function nextDark(now){for(let i=0;i<=360;i++){const t=new Date(now.getTime()+i*300000);if(sunAlt(t,HOME.lat,HOME.lon)<-8)return t}return null}
+const isDarkNow=()=>sunAlt(new Date(),HOME.lat,HOME.lon)<-8;
 
-/* nights: the three windows 18:00–02:00 starting with the current/upcoming one */
+/* nights: four windows 18:00–02:00 starting with the current or upcoming one */
 function nightList(){
-  const now=new Date(),out=[];let base=nightKey(now)||local(now).date;
-  const d0=new Date(base+"T12:00:00Z");
-  for(let i=0;i<3;i++){const d=new Date(d0.getTime()+i*86400e3),key=d.toISOString().slice(0,10);
-    out.push({key,label:i===0?"Tonight":i===1?"Tomorrow night":fDay.format(d)+" night",date:d})}
+  const now=new Date(),out=[];const base=nightKey(now)||local(now).date;const d0=new Date(base+"T12:00:00Z");
+  for(let i=0;i<4;i++){const d=new Date(d0.getTime()+i*86400e3),key=d.toISOString().slice(0,10);
+    out.push({key,label:i===0?"Tonight":i===1?"Tomorrow night":fWk.format(d)+" night",date:d})}
   return out;
 }
-const skyWord=c=>c==null?"no data":c<=25?"Clear":c<=50?"Some clouds":c<=75?"Mostly cloudy":"Cloudy";
+const skyWord=c=>c==null?"No data":c<=25?"Clear":c<=50?"Some clouds":c<=75?"Mostly cloudy":"Cloudy";
 const skyCls=c=>c==null?"":c<=35?"c-good":c<=65?"c-maybe":"c-no";
-const actWord=k=>k==null?"unknown":k>=5?"Storm":k>=3.5?"High":k>=2?"Medium":"Low";
+const actWord=k=>k==null?"Not forecast yet":k>=5?"Storm":k>=3.5?"High":k>=2?"Medium":"Low";
+const moonWord=m=>m<0.25?"Dark":m<0.6?"Half":"Bright";
 function hoursIn(times,key,fromNow){const now=Date.now()-3600e3;return times.map((t,i)=>({t,i})).filter(x=>nightKey(x.t)===key&&(!fromNow||x.t.getTime()>=now))}
 function avg(a){const v=a.filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null}
 
@@ -211,28 +248,50 @@ function nightInfo(n,idx){
     const mid=hs.find(h=>local(h.t).hour===22)||hs[Math.floor(hs.length/2)];r.mapHour=mid?mid.i:null;r.mapTime=mid?mid.t:null}
   if(S.kp.length){const s=new Date(n.key+"T17:00:00Z").getTime(),e=s+8*3600e3;
     const ks=S.kp.filter(k=>k.t.getTime()+3*3600e3>s&&k.t.getTime()<e).map(k=>k.kp);r.kp=ks.length?Math.max(...ks):null}
+  if(r.kp==null&&S.kpDaily[n.key]!=null)r.kp=S.kpDaily[n.key];
   const best=r.spots&&r.spots[0];
   const sky=Math.min(r.town??101,best?best.c:101);
-  const clr=sky<=101?(sky<=35?2:sky<=65?1:0):null;
+  const clr=sky<=100?(sky<=35?2:sky<=65?1:0):null;
   const act=r.kp==null?null:r.kp>=3?2:r.kp>=1.7?1:0;
-  if(clr==null){r.rate="Loading…";r.cls="";r.why="Waiting for the cloud forecast."}
+  if(clr==null){r.rate="Loading…";r.cls="";r.level=0;r.why="Waiting for the cloud forecast."}
   else{
-    if(clr===0){r.rate="Unlikely";r.cls="c-no"}
-    else if(clr===2&&act!==0){r.rate="Good chance";r.cls="c-good"}
-    else{r.rate="Worth a try";r.cls="c-maybe"}
-    const townC=r.town;
+    if(clr===0){r.rate="Unlikely";r.cls="c-no";r.level=1}
+    else if(clr===2&&act>=1){r.rate="Good chance";r.cls="c-good";r.level=3}
+    else{r.rate="Worth a try";r.cls="c-maybe";r.level=2}
+    const t=r.town;
     if(clr===0)r.why="Clouds everywhere around Tromsø.";
-    else if(townC!=null&&townC>65&&best&&!best.home)r.why=`Cloudy in town, but clearer at ${best.name}.`;
-    else if(townC!=null&&townC<=35)r.why=r.townBest?`Clear sky in Tromsø, clearest around ${fHM.format(r.townBest.t)}.`:"Clear sky in Tromsø.";
-    else r.why=best&&!best.home&&best.c<(townC??101)-15?`Gaps in the clouds. ${best.name} looks best.`:"Gaps in the clouds. Watch for clear patches.";
+    else if(t!=null&&t>65&&best&&!best.home)r.why=`Cloudy ${here()}, but clearer at ${best.name}.`;
+    else if(t!=null&&t<=35)r.why=r.townBest&&idx<2?`Clear sky ${here()}, clearest around ${fHM.format(r.townBest.t)}.`:`Clear sky ${here()}.`;
+    else r.why=best&&!best.home&&best.c<(t??101)-15?`Gaps in the clouds. ${best.name} looks best.`:"Gaps in the clouds. Watch for clear patches.";
     if(act===0&&clr>0)r.why+=" Aurora activity is low, so expect it faint if at all.";
+    if(act==null&&clr>0)r.why+=" The aurora forecast doesn't reach this night yet.";
   }
-  const m=moonIllum(new Date(n.key+"T21:00:00Z"));r.moon=m;
+  r.moon=moonIllum(new Date(n.key+"T21:00:00Z"));
   return r;
 }
 
+/* hero sky */
+const cv=$("skyCv"),cx=cv.getContext("2d");let stars=[],heroLevel=0.3,heroTarget=0.3;
+const BANDS=[{y:.62,f:.011,s:.00035,a:.55,c:"93,242,176",top:"181,140,255"},{y:.5,f:.017,s:-.00028,a:.35,c:"120,255,200",top:"120,160,255"},{y:.74,f:.008,s:.0002,a:.3,c:"200,245,106",top:"93,242,176"}];
+function sizeSky(){const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);cv.width=Math.max(1,r.width*d);cv.height=Math.max(1,r.height*d);cx.setTransform(d,0,0,d,0,0);
+  stars=Array.from({length:80},()=>({x:Math.random()*r.width,y:Math.random()*r.height*.85,r:Math.random()*1.1+.3,p:Math.random()*6.3}))}
+function drawSky(t){const w=cv.clientWidth,h=cv.clientHeight;cx.clearRect(0,0,w,h);heroLevel+=(heroTarget-heroLevel)*.03;
+  cx.fillStyle="#fff";for(const s of stars){cx.globalAlpha=.3+.3*Math.sin(t/900+s.p);cx.beginPath();cx.arc(s.x,s.y,s.r,0,6.3);cx.fill()}
+  cx.globalAlpha=1;cx.globalCompositeOperation="lighter";
+  BANDS.forEach((b,k)=>{for(let x=0;x<w;x+=5){
+    const y=h*b.y+Math.sin(x*b.f+t*b.s)*h*.09+Math.sin(x*b.f*2.3-t*b.s*1.7+k)*h*.04;
+    const len=h*(.38+.16*Math.sin(x*.013+t*.0004+k*2));
+    const a=heroLevel*b.a*(.55+.45*Math.sin(x*.05+t*.001+k));
+    const g=cx.createLinearGradient(0,y-len,0,y);g.addColorStop(0,`rgba(${b.top},0)`);g.addColorStop(.55,`rgba(${b.c},${(a*.45).toFixed(3)})`);g.addColorStop(1,`rgba(${b.c},${a.toFixed(3)})`);
+    cx.fillStyle=g;cx.fillRect(x,y-len,5,len)}});
+  cx.globalCompositeOperation="source-over"}
+let lastF=0;function loop(t){if(!document.hidden&&t-lastF>33){lastF=t;drawSky(t)}requestAnimationFrame(loop)}
+function startSky(){sizeSky();window.addEventListener("resize",()=>{sizeSky();drawSky(performance.now())});
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){heroLevel=heroTarget;drawSky(4000)}else requestAnimationFrame(loop)}
+
 /* map */
-let map,ready=false,pins=[];
+let map,ready=false,pins=[],meMarker=null;
+const empty=()=>({type:"FeatureCollection",features:[]});
 async function initMap(){
   if(!window.maplibregl){$("map").textContent="The map couldn't load. Check your connection.";return}
   let style=null;
@@ -248,37 +307,38 @@ async function initMap(){
     map.addLayer({id:"aurora",type:"fill",source:"aurora",paint:{"fill-antialias":false,
       "fill-color":["interpolate",["linear"],["get","a"],2,"#2bd98f",30,"#5df2b0",60,"#c8f56a",90,"#f6e96b"],
       "fill-opacity":["interpolate",["linear"],["get","a"],2,0.12,20,0.35,60,0.55]}},firstSym);
-    ready=true;drawAurora();drawMap();
+    ready=true;drawAurora();drawMap();drawMe();
   });
 }
-const empty=()=>({type:"FeatureCollection",features:[]});
+function drawMe(){if(!ready)return;if(meMarker){meMarker.remove();meMarker=null}
+  if(HOME.user){const el=document.createElement("div");el.className="me";meMarker=new maplibregl.Marker({element:el}).setLngLat([HOME.lon,HOME.lat]).addTo(map);map.flyTo({center:[HOME.lon,HOME.lat],zoom:7.5})}
+  else map.flyTo({center:[TROMSO.lon+0.3,69.6],zoom:6.4})}
 function drawAurora(){
-  if(!ready)return;
-  const f=[];
+  if(!ready)return;const f=[];
   if(S.sel===0&&S.ov)for(const [lo0,la,a] of S.ov){if(a<2||la<45)continue;const lo=lo0>180?lo0-360:lo0;
     f.push({type:"Feature",properties:{a},geometry:{type:"Polygon",coordinates:[[[lo-.5,la-.5],[lo+.5,la-.5],[lo+.5,la+.5],[lo-.5,la+.5],[lo-.5,la-.5]]]}})}
   map.getSource("aurora").setData({type:"FeatureCollection",features:f});
 }
-function currentHourIndex(){if(!S.om)return null;const now=Date.now();let b=0;S.om.times.forEach((t,i)=>{if(Math.abs(t-now)<Math.abs(S.om.times[b]-now))b=i});return b}
+function nearestIdx(times){const now=Date.now();let b=0;times.forEach((t,i)=>{if(Math.abs(t-now)<Math.abs(times[b]-now))b=i});return b}
 function drawMap(){
-  if(!S.om)return;
-  const n=S.sel===0&&isDarkNow()?{mapHour:currentHourIndex(),mapTime:S.om.times[currentHourIndex()]}:S.info[S.sel];
-  const i=n&&n.mapHour;
-  $("mapWhen").textContent=i==null?"":(S.sel===0&&isDarkNow()?"Clouds right now":`Clouds at ${fHM.format(n.mapTime)}, ${S.info[S.sel].label.toLowerCase()}`);
+  if(!S.om||!S.info.length)return;
+  const live=S.sel===0&&isDarkNow(),sel=S.info[S.sel];
+  const i=live?nearestIdx(S.om.times):sel.mapHour,when=live?null:sel.mapTime;
+  $("mapWhen").textContent=i==null?"":(live?"Clouds right now":`Clouds at ${fHM.format(when)}, ${sel.label.toLowerCase()}`);
   if(!ready||i==null)return;
   map.getSource("clouds").setData({type:"FeatureCollection",features:S.om.grid.map(g=>{const c=g.cloud[i];return c==null?null:{type:"Feature",properties:{c},geometry:{type:"Polygon",coordinates:[[[g.lon-.25,g.lat-.125],[g.lon+.25,g.lat-.125],[g.lon+.25,g.lat+.125],[g.lon-.25,g.lat+.125],[g.lon-.25,g.lat-.125]]]}}}).filter(Boolean)});
   pins.forEach(p=>p.remove());pins=[];
-  S.om.spots.forEach(s=>{const c=s.cloud[i];if(c==null)return;
-    const el=document.createElement("div");el.className="pin";el.style.setProperty("--c",c<=35?"#5df2b0":c<=65?"#ffcc66":"#ff8a93");el.textContent=s.home?"Tromsø":s.name.replace(/ \(.*\)/,"");
-    pins.push(new maplibregl.Marker({element:el}).setLngLat([s.lon,s.lat]).setPopup(new maplibregl.Popup({offset:14,closeButton:false}).setText(`${s.name}: ${skyWord(c).toLowerCase()} (${Math.round(c)}% cloud)`)).addTo(map))});
+  S.om.spots.forEach(s=>{const c=s.cloud[i];if(c==null||(s.home&&HOME.user))return;
+    const el=document.createElement("div");el.className="pin";el.style.setProperty("--c",c<=35?"#5df2b0":c<=65?"#ffcc66":"#ff8a93");el.textContent=s.name.replace(/ \(.*\)| centre/,"");
+    pins.push(new maplibregl.Marker({element:el}).setLngLat([s.lon,s.lat]).setPopup(new maplibregl.Popup({offset:14,closeButton:false}).setText(`${s.name}: ${skyWord(c).toLowerCase()}`)).addTo(map))});
 }
-function isDarkNow(){return sunAlt(new Date(),HOME.lat,HOME.lon)<-8}
 
 /* loaders */
+function calcAurora(){if(!S.ov)return;const m=new Map();for(const [lo,la,a] of S.ov)m.set(lo+"_"+la,a);
+  const lo0=(Math.round(HOME.lon)+360)%360,la0=Math.round(HOME.lat);S.pHere=m.get(lo0+"_"+la0)??0;
+  let mx=0;for(let a=-4;a<=4;a++)for(let b=-6;b<=6;b++){const v=m.get(((lo0+b+360)%360)+"_"+(la0+a));if(v>mx)mx=v}S.pNear=mx}
 async function loadOvation(){
-  try{const j=await getJSON("https://services.swpc.noaa.gov/json/ovation_aurora_latest.json");S.ov=j.coordinates||[];
-    const m=new Map();for(const [lo,la,a] of S.ov)m.set(lo+"_"+la,a);const lo0=Math.round(HOME.lon),la0=Math.round(HOME.lat);
-    S.pHere=m.get(lo0+"_"+la0)??0;let mx=0;for(let a=-4;a<=4;a++)for(let b=-6;b<=6;b++){const v=m.get(((lo0+b+360)%360)+"_"+(la0+a));if(v>mx)mx=v}S.pNear=mx;
+  try{const j=await getJSON("https://services.swpc.noaa.gov/json/ovation_aurora_latest.json");S.ov=j.coordinates||[];calcAurora();
     status("Ov",true,"Updated "+fHM.format(new Date()));drawAurora()}
   catch(e){status("Ov",false,"Didn't load ("+e.message+")")}
   render();
@@ -289,71 +349,107 @@ async function loadKp(){
     S.kp=j.map(r=>({t:parseT(r.time_tag),kp:parseFloat(r.kp??r.Kp)})).filter(r=>Number.isFinite(r.kp)&&!isNaN(r.t));
     status("Kp",true,"Updated "+fHM.format(new Date()))}
   catch(e){status("Kp",false,"Didn't load ("+e.message+")")}
+  try{const r=await fetch("https://services.swpc.noaa.gov/text/27-day-outlook.txt",{cache:"no-store"});if(r.ok){
+    const MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+    for(const line of (await r.text()).split("\n")){const m=line.match(/^(\d{4})\s+([A-Z][a-z]{2})\s+(\d{1,2})\s+\d+\s+\d+\s+(\d+)\s*$/);
+      if(m&&MON[m[2]])S.kpDaily[`${m[1]}-${String(MON[m[2]]).padStart(2,"0")}-${m[3].padStart(2,"0")}`]=+m[4]}}}catch(e){}
   render();
 }
 async function loadMet(){
-  try{const j=await getJSON(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${HOME.lat}&lon=${HOME.lon}`);
-    const ts=j.properties.timeseries;S.met={times:ts.map(x=>new Date(x.time)),cloud:ts.map(x=>x.data.instant.details.cloud_area_fraction??null)};
+  const at=HOME;
+  try{const j=await getJSON(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${at.lat.toFixed(4)}&lon=${at.lon.toFixed(4)}`);
+    if(at!==HOME)return;const ts=j.properties.timeseries;S.met={times:ts.map(x=>new Date(x.time)),cloud:ts.map(x=>x.data.instant.details.cloud_area_fraction??null)};
     status("Met",true,"Updated "+fHM.format(new Date()))}
-  catch(e){status("Met",false,"Didn't load ("+e.message+"). Using Open-Meteo for town clouds instead.")}
+  catch(e){status("Met",false,"Didn't load ("+e.message+"). Using Open-Meteo for local clouds instead.")}
   render();
 }
 async function loadClouds(){
-  const pts=[...SPOTS,...GRID];
-  const base="https://api.open-meteo.com/v1/forecast?latitude="+pts.map(p=>p.lat).join(",")+"&longitude="+pts.map(p=>p.lon).join(",")+"&hourly=cloud_cover&forecast_days=4&timeformat=unixtime&timezone=GMT";
+  const at=HOME,sp=spotList(),pts=[...sp,...GRID];
+  const base="https://api.open-meteo.com/v1/forecast?latitude="+pts.map(p=>p.lat.toFixed(3)).join(",")+"&longitude="+pts.map(p=>p.lon.toFixed(3)).join(",")+"&hourly=cloud_cover&forecast_days=6&timeformat=unixtime&timezone=GMT";
   let j=null,err=null;
   for(const u of[base+"&models=metno_seamless",base]){try{j=await getJSON(u);break}catch(e){err=e}}
+  if(at!==HOME)return;
   if(!j){status("Om",false,"Didn't load ("+err.message+")");render();return}
   if(!Array.isArray(j))j=[j];
   const key=h=>h.cloud_cover||h[Object.keys(h).find(k=>k.startsWith("cloud_cover"))]||[];
-  S.om={times:j[0].hourly.time.map(t=>new Date(t*1000)),spots:SPOTS.map((p,i)=>({...p,cloud:key(j[i].hourly)})),grid:GRID.map((p,i)=>({...p,cloud:key(j[SPOTS.length+i].hourly)}))};
+  S.om={times:j[0].hourly.time.map(t=>new Date(t*1000)),spots:sp.map((p,i)=>({...p,cloud:key(j[i].hourly)})),grid:GRID.map((p,i)=>({...p,cloud:key(j[sp.length+i].hourly)}))};
   status("Om",true,"Updated "+fHM.format(new Date()));
   render();
 }
 
+/* location */
+function say(msg){const e=$("locMsg");e.textContent=msg||"";e.style.display=msg?"block":"none"}
+function setHome(h,remember){HOME=h;S.met=null;calcAurora();
+  try{if(remember){if(h.user)localStorage.setItem("aurora-home",JSON.stringify({lat:h.lat,lon:h.lon}));else localStorage.removeItem("aurora-home")}}catch(e){}
+  $("locBtn").textContent=h.user?"Back to Tromsø":"Use my location";drawMe();render();loadMet();loadClouds()}
+function tryUser(lat,lon,remember){const km=hav(TROMSO,{lat,lon});
+  if(km>150){say(`You're about ${Math.round(km/10)*10} km from Tromsø, so this page stays on Tromsø.`);return}
+  say("");setHome({name:"your location",lat,lon,user:true},remember)}
+$("locBtn").addEventListener("click",()=>{
+  if(HOME.user){say("");setHome({...TROMSO},true);return}
+  if(!navigator.geolocation){say("Your browser doesn't offer location here.");return}
+  say("Finding you…");
+  navigator.geolocation.getCurrentPosition(p=>tryUser(p.coords.latitude,p.coords.longitude,true),
+    ()=>say("Couldn't get your location. Allow location access for this site in your browser, then tap again."),{enableHighAccuracy:false,timeout:15000,maximumAge:600000});
+});
+
 /* render */
+const GLOW={"c-good":"#5df2b0","c-maybe":"#ffcc66","c-no":"#ff8a93","":"#93a1c2"};
 function render(){
-  const now=new Date();$("clock").textContent=fHM.format(now)+" local time";
+  const now=new Date();$("clock").textContent=fHM.format(now);
+  $("nowWhere").textContent=HOME.user?"Right now where you are":"Right now in Tromsø";
   S.info=nightList().map(nightInfo);
-  // nights
   const box=$("nights");box.textContent="";
-  S.info.forEach((n,i)=>{const b=document.createElement("button");b.className="night";b.setAttribute("aria-pressed",i===S.sel);
-    const kpTxt=n.kp==null?"–":actWord(n.kp);
-    b.innerHTML=`<span class="day"></span><span class="rate ${n.cls}"></span><span class="why"></span><span class="badges"><span class="badge">Sky: <b class="sky"></b></span><span class="badge">Aurora activity: <b></b></span></span>`;
+  S.info.forEach((n,i)=>{const b=document.createElement("button");b.className="night";b.id="night"+i;b.setAttribute("aria-pressed",i===S.sel);b.style.setProperty("--glow",GLOW[n.cls]);
+    b.innerHTML='<span class="day"></span><span class="rate"></span><span class="meter"><i></i><i></i><i></i></span><span class="why"></span><span class="badges"><span class="badge">Sky <b></b></span><span class="badge">Aurora <b></b></span><span class="badge">Moon <b></b></span></span>';
     b.querySelector(".day").textContent=n.label+" · "+fDay.format(n.date);
-    b.querySelector(".rate").textContent=n.rate;b.querySelector(".why").textContent=n.why+(n.moon>0.6?" Bright moon.":"");
-    const sk=b.querySelector(".sky");sk.textContent=skyWord(n.town);sk.className=skyCls(n.town);
-    b.querySelectorAll(".badge b")[1].textContent=kpTxt;
+    const r=b.querySelector(".rate");r.textContent=n.rate;if(n.cls)r.classList.add(n.cls);
+    b.querySelectorAll(".meter i").forEach((m,k)=>{if(k<n.level)m.className="on"});
+    b.querySelector(".why").textContent=n.why;
+    const bs=b.querySelectorAll(".badge b");bs[0].textContent=skyWord(n.town).toLowerCase();if(skyCls(n.town))bs[0].className=skyCls(n.town);
+    bs[1].textContent=actWord(n.kp).toLowerCase();bs[2].textContent=moonWord(n.moon).toLowerCase();
     b.addEventListener("click",()=>{S.sel=i;render();drawAurora()});box.appendChild(b)});
+  const n=S.info[S.sel];
+  // hour strip
+  const hb=$("hours");hb.textContent="";$("hoursTitle").textContent=`Sky hour by hour ${here()}, ${n.label.toLowerCase()}`;
+  const hs=S.om&&S.om.spots.find(s=>s.home);
+  if(hs){hoursIn(S.om.times,n.key,false).forEach(h=>{const c=hs.cloud[h.i];if(c==null)return;const d=document.createElement("div");d.className="hr"+(h.t.getTime()<now.getTime()-3600e3?" past":"");
+    d.innerHTML="<i></i><span></span>";d.querySelector("i").style.setProperty("--c",c<=35?"#3fd69a":c<=65?"#d9b25a":"#3a4664");d.querySelector("i").title=skyWord(c);
+    d.querySelector("span").textContent=String(local(h.t).hour).padStart(2,"0");hb.appendChild(d)})}
+  if(!hb.children.length)hb.innerHTML='<span class="small">No hourly forecast for this night yet.</span>';
   // spots
-  const n=S.info[S.sel];$("spotsTitle").textContent="Where to go "+n.label.toLowerCase();
+  $("spotsTitle").textContent="Where to go "+n.label.toLowerCase();
   const ul=$("spots");ul.textContent="";
-  if(n.spots&&n.spots.length){n.spots.slice(0,5).forEach(s=>{const li=document.createElement("li");
+  if(n.spots&&n.spots.length){n.spots.slice(0,6).forEach((s,k)=>{const li=document.createElement("li");
     li.innerHTML='<div><div class="name"></div><div class="small"></div></div><div class="sky"></div>';
-    li.querySelector(".name").textContent=s.name;li.querySelector(".small").textContent=s.home?"In town":`About ${Math.round(s.km/5)*5||5} km from Tromsø`;
-    const k=li.querySelector(".sky");k.textContent=skyWord(s.c);k.className="sky "+skyCls(s.c);ul.appendChild(li)})}
+    li.querySelector(".name").textContent=s.name;if(k===0&&s.c<=65){const t=document.createElement("span");t.className="top";t.textContent="Best bet";li.querySelector(".name").appendChild(t)}
+    li.querySelector(".small").textContent=s.home?(HOME.user?"Right where you are":"In town"):`About ${Math.max(5,Math.round(s.km/5)*5)} km from ${HOME.user?"you":"Tromsø"}`;
+    const k2=li.querySelector(".sky");k2.textContent=skyWord(s.c);if(skyCls(s.c))k2.classList.add(skyCls(s.c));ul.appendChild(li)})}
   else ul.innerHTML='<li class="small">Cloud forecast not available yet.</li>';
   drawMap();
   // right now
-  const alt=sunAlt(now,HOME.lat,HOME.lon);let big,text,tone;
-  let nowC=null;if(S.met){let b=0;S.met.times.forEach((t,i)=>{if(Math.abs(t-now)<Math.abs(S.met.times[b]-now))b=i});nowC=S.met.cloud[b]}
-  if(nowC==null&&S.om){const h=currentHourIndex();nowC=S.om.spots[0].cloud[h]}
+  const alt=sunAlt(now,HOME.lat,HOME.lon);let big,text,tone,lvl=.3;
+  let nowC=null;if(S.met)nowC=S.met.cloud[nearestIdx(S.met.times)];
+  if(nowC==null&&S.om&&hs)nowC=hs.cloud[nearestIdx(S.om.times)];
   const best0=S.info[0].spots&&S.info[0].spots[0];
-  if(alt>=-8){const d=nextDark(now);big="Too light right now";tone="var(--maybe)";text=d?`It gets dark around ${fHM.format(d)}. Check tonight's forecast below.`:"It won't get dark enough today."}
+  if(alt>=-8){const d=nextDark(now);big="Too light right now";tone="var(--maybe)";lvl=.15;text=d?`It gets dark around ${fHM.format(d)}. Check tonight's forecast below.`:"It won't get dark enough today."}
   else if(nowC==null||S.pHere==null){big="Checking the sky…";tone="var(--muted)";text="Getting the latest aurora and cloud data."}
   else{
-    const act=Math.max(S.pHere,0.6*S.pNear);const a=act>=20?2:act>=5?1:0;const clear=nowC<=35?2:nowC<=65?1:0;
-    if(clear===0){big=best0&&best0.c<=50&&!best0.home?"Cloudy here. Drive out?":"Too cloudy right now";tone="var(--no)";
-      text=best0&&best0.c<=50&&!best0.home?`The sky over Tromsø is covered, but ${best0.name} looks clearer tonight.`:"The sky is covered around Tromsø. Check the nights below for a better chance."}
-    else if(a===2){big="Go outside now!";tone="var(--good)";text="It's dark, the sky is "+(clear===2?"clear":"partly clear")+" and the aurora is active over Tromsø. Find a dark spot and look up."}
-    else if(a===1){big="Worth a look";tone="var(--aurora)";text="It's dark with "+(clear===2?"a clear sky":"gaps in the clouds")+", and there is some aurora activity. Get away from lights and look north."}
-    else{big="Quiet for now";tone="var(--muted)";text="It's dark and you can see the sky, but aurora activity is low right now. It can pick up quickly, so check again in 30 minutes."}
+    const act=Math.max(S.pHere,0.6*S.pNear),a=act>=20?2:act>=5?1:0,clear=nowC<=35?2:nowC<=65?1:0;
+    if(clear===0){const out=best0&&best0.c<=50&&!best0.home;big=out?"Cloudy here. Drive out?":"Too cloudy right now";tone="var(--no)";lvl=.18;
+      text=out?`The sky ${here()} is covered, but ${best0.name} looks clearer tonight.`:"The sky is covered around Tromsø. Check the nights below for a better chance."}
+    else if(a===2){big="Go outside now!";tone="var(--good)";lvl=1;text="It's dark, the sky is "+(clear===2?"clear":"partly clear")+" and the aurora is active overhead. Find a dark spot and look up."}
+    else if(a===1){big="Worth a look";tone="var(--aurora)";lvl=.65;text="It's dark with "+(clear===2?"a clear sky":"gaps in the clouds")+", and there is some aurora activity. Get away from lights and look north."}
+    else{big="Quiet for now";tone="var(--muted)";lvl=.3;text="It's dark and you can see the sky, but aurora activity is low right now. It can pick up quickly, so check again in 30 minutes."}
   }
-  $("now").style.setProperty("--tone",tone);$("nowBig").textContent=big;$("nowText").textContent=text;
+  heroTarget=lvl;$("now").style.setProperty("--tone",tone);$("nowBig").textContent=big;$("nowText").textContent=text;
 }
 
-initMap();render();
-loadOvation();loadKp();loadMet();loadClouds();
+startSky();initMap();render();
+loadOvation();loadKp();
+let saved=null;try{saved=JSON.parse(localStorage.getItem("aurora-home")||"null")}catch(e){}
+if(saved&&Number.isFinite(saved.lat)&&Number.isFinite(saved.lon))tryUser(saved.lat,saved.lon,false);
+if(!HOME.user){loadMet();loadClouds()}
 setInterval(loadOvation,5*60e3);setInterval(loadKp,30*60e3);setInterval(loadMet,15*60e3);setInterval(loadClouds,20*60e3);setInterval(render,60e3);
 </script>
 </body>
